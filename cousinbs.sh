@@ -8,6 +8,7 @@ REPO_URL="https://github.com/zorp-corp/nockchain"
 PROJECT_DIR="$HOME/nockchain"
 PUBKEY="3N3VYoXoiLmhcpGmFLEWHA6Lkzsb52QXmzEFjLnQFVr4kRrc2sT4fx85Wk6TGh1e6TMj2GHzrdfBW3gyJUbmda9aDtNvNqBHYM4NHpHnRSCpcZ9KqsrDpwJ5BToT3YVGBRpL"
 ENV_FILE="$PROJECT_DIR/.env"
+MAKEFILE="$PROJECT_DIR/Makefile"
 TMUX_SESSION="nock-miner"
 
 echo ""
@@ -42,38 +43,39 @@ else
 fi
 cd "$PROJECT_DIR"
 
-### 4. Setup .env BEFORE building (fixes make error)
-echo "[4/7] Creating .env file..."
+### 4. Create or update .env
+echo "[4/7] Setting pubkey in .env..."
 cp -f .env_example .env
 sed -i "s|^MINING_PUBKEY=.*|MINING_PUBKEY=$PUBKEY|" "$ENV_FILE"
 grep "MINING_PUBKEY" "$ENV_FILE"
 
-# Paranoid fallback: force pubkey override inside Makefile as well
-sed -i "s|^export MINING_PUBKEY.*|export MINING_PUBKEY := $PUBKEY|" "$PROJECT_DIR/Makefile"
+### 5. Update Makefile with pubkey (if line exists)
+echo "[5/7] Patching Makefile with pubkey..."
+if grep -q "^export MINING_PUBKEY" "$MAKEFILE"; then
+  sed -i "s|^export MINING_PUBKEY.*|export MINING_PUBKEY := $PUBKEY|" "$MAKEFILE"
+else
+  echo "export MINING_PUBKEY := $PUBKEY" >> "$MAKEFILE"
+fi
+grep "MINING_PUBKEY" "$MAKEFILE"
 
-# Confirm both .env and Makefile have the correct pubkey
-echo "[DEBUG] Confirming pubkey injection..."
-grep "MINING_PUBKEY" "$ENV_FILE"
-grep "MINING_PUBKEY" "$PROJECT_DIR/Makefile"
-
-### 5. Build Nockchain
-echo "[5/7] Building Nockchain..."
+### 6. Build Everything
+echo "[6/7] Building Nockchain..."
 make install-hoonc
 make build
 make install-nockchain
 make install-nockchain-wallet
 
-### 6. Clean previous node data (recommended by README)
-echo "[6/7] Cleaning up old chain data..."
+### 7. Clean previous node data
+echo "[7/7] Cleaning old data directory..."
 rm -rf "$PROJECT_DIR/.data.nockchain"
 
-### 7. Start Miner
-echo "[7/7] Launching miner in tmux..."
+### 8. Start Miner using CLI pubkey
+echo "[8/8] Launching miner in tmux with your pubkey..."
 tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
-tmux new-session -d -s "$TMUX_SESSION" "cd $PROJECT_DIR && make run-nockchain | tee -a miner.log"
+tmux new-session -d -s "$TMUX_SESSION" "cd $PROJECT_DIR && nockchain --mining-pubkey $PUBKEY --mine | tee -a miner.log"
 
 echo ""
 echo "✅ Nockchain MainNet Miner launched successfully!"
 echo "   - To view miner logs: tmux attach -t $TMUX_SESSION"
-echo "   - Wallet PubKey: $PUBKEY"
+echo "   - Wallet PubKey (used + saved): $PUBKEY"
 echo ""
