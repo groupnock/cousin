@@ -12,17 +12,15 @@ MAKEFILE="$PROJECT_DIR/Makefile"
 TMUX_SESSION="nock-miner"
 
 echo ""
-echo "[!] Cleaning up old Nockchain installation..."
-rm -rf "$PROJECT_DIR"
-rm -rf "$HOME/.nockapp"
-rm -rf "$HOME/.data.nockchain"
-rm -rf "$HOME/.cargo/bin/nockchain" "$HOME/.cargo/bin/nockchain-wallet"
-echo "Done. Sleeping for 10 seconds..."
-sleep 10
-
+echo "[!] Purging all files in current working directory..."
+rm -rf *
+sleep 10  # Safety pause
+echo "[✔] Directory cleaned. Continuing..."
 echo ""
+
 echo "[+] Nockchain MainNet Bootstrap Starting..."
 echo "-------------------------------------------"
+
 
 ### 1. Install Rust Toolchain
 echo "[1/7] Installing Rust toolchain..."
